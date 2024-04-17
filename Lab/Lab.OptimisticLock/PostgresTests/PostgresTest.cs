@@ -58,9 +58,9 @@ public class PostgresTest(PostgresTestFixture fixture) : IClassFixture<PostgresT
     {
         await using var connection = new NpgsqlConnection(fixture.GetConnectionString());
 
-        const string insertSql = "INSERT INTO example_row (name) VALUES (@name) returning id;";
+        const string insertSql = "INSERT INTO example_row (name) VALUES (@name) RETURNING id;";
 
-        var id = await connection.ExecuteScalarAsync<Guid>(insertSql,new { Name = "initial name" });
+        var id = await connection.ExecuteScalarAsync<Guid>(insertSql, new { Name = "initial name" });
 
         const string findByIdSql = "SELECT id, name, xmin AS RowVersion FROM example_row WHERE id = @Id";
         var row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;
@@ -72,5 +72,9 @@ public class PostgresTest(PostgresTestFixture fixture) : IClassFixture<PostgresT
         const string updateWithLockSql = "UPDATE example_row SET name = @Name WHERE id = @Id AND xmin = @RowVersion";
         affectRowCount = await connection.ExecuteAsync(updateWithLockSql, new { Name = "expect concurrency", Id = id, RowVersion = (int)row.RowVersion });
         affectRowCount.Should().Be(0);
+
+        row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;
+        affectRowCount = await connection.ExecuteAsync(updateWithLockSql, new { Name = "expect concurrency", Id = id, RowVersion = (int)row.RowVersion });
+        affectRowCount.Should().Be(1);
     }
 }

@@ -62,7 +62,7 @@ public class SqlServerTest(SqlServerTestFixture fixture) : IClassFixture<SqlServ
 
         const string insertSql = "INSERT INTO ExampleRow (Name) OUTPUT INSERTED.Id VALUES (@Name);";
 
-        var id = await connection.ExecuteScalarAsync<Guid>(insertSql,new { Name = "initial name" });
+        var id = await connection.ExecuteScalarAsync<Guid>(insertSql, new { Name = "initial name" });
 
         const string findByIdSql = "SELECT Id, Name, RowVersion FROM ExampleRow WHERE Id = @Id";
         var row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;
@@ -74,5 +74,9 @@ public class SqlServerTest(SqlServerTestFixture fixture) : IClassFixture<SqlServ
         const string updateWithLockSql = "UPDATE ExampleRow SET Name = @Name WHERE Id = @Id AND RowVersion = @RowVersion";
         affectRowCount = await connection.ExecuteAsync(updateWithLockSql, new { Name = "expect concurrency", Id = id, RowVersion = row.RowVersion });
         affectRowCount.Should().Be(0);
+
+        row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;
+        affectRowCount = await connection.ExecuteAsync(updateWithLockSql, new { Name = "expect concurrency", Id = id, RowVersion = row.RowVersion });
+        affectRowCount.Should().Be(1);
     }
 }
