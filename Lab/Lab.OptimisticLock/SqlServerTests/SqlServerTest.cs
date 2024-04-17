@@ -60,9 +60,9 @@ public class SqlServerTest(SqlServerTestFixture fixture) : IClassFixture<SqlServ
     {
         await using var connection = new SqlConnection(fixture.GetConnectionString());
 
-        const string insertSql = "INSERT INTO ExampleRow (name) OUTPUT INSERTED.Id VALUES (@Name);";
+        const string insertSql = "INSERT INTO ExampleRow (Name) OUTPUT INSERTED.Id VALUES (@Name);";
 
-        var id = await connection.QueryFirstOrDefaultAsync<Guid>(insertSql,new { Name = "initial name" });
+        var id = await connection.ExecuteScalarAsync<Guid>(insertSql,new { Name = "initial name" });
 
         const string findByIdSql = "SELECT Id, Name, RowVersion FROM ExampleRow WHERE Id = @Id";
         var row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;

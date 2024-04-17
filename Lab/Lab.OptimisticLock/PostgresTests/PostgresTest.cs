@@ -60,16 +60,16 @@ public class PostgresTest(PostgresTestFixture fixture) : IClassFixture<PostgresT
 
         const string insertSql = "INSERT INTO example_row (name) VALUES (@name) returning id;";
 
-        var id = await connection.QueryFirstOrDefaultAsync<Guid>(insertSql,new { Name = "initial name" });
+        var id = await connection.ExecuteScalarAsync<Guid>(insertSql,new { Name = "initial name" });
 
-        const string findByIdSql = "select id, name, xmin as RowVersion from example_row where id = @Id";
+        const string findByIdSql = "SELECT id, name, xmin AS RowVersion FROM example_row WHERE id = @Id";
         var row = (await connection.QueryFirstOrDefaultAsync<ExampleRow>(findByIdSql, new { Id = id }))!;
         
-        const string updateWithoutLockSql = "update example_row set name = @Name where id = @Id";
+        const string updateWithoutLockSql = "UPDATE example_row SET name = @Name WHERE id = @Id";
         var affectRowCount = await connection.ExecuteAsync(updateWithoutLockSql, new { Name = "change name", Id = id });
         affectRowCount.Should().Be(1);
 
-        const string updateWithLockSql = "update example_row set name = @Name where id = @Id and xmin = @RowVersion";
+        const string updateWithLockSql = "UPDATE example_row SET name = @Name WHERE id = @Id AND xmin = @RowVersion";
         affectRowCount = await connection.ExecuteAsync(updateWithLockSql, new { Name = "expect concurrency", Id = id, RowVersion = (int)row.RowVersion });
         affectRowCount.Should().Be(0);
     }
